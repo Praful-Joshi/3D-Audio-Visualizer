@@ -8,8 +8,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
+//#include "audioAnalyzer.h"
 
 const int particleCount = 500;
+const float camRadius = 10.0f;
+float camAngle = 0.0f;
 
 const char* vertexShaderSrc = R"(
 #version 330 core
@@ -94,6 +97,10 @@ int main() {
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.f/600.f, 0.1f, 100.0f);
     glm::mat4 view = glm::lookAt(glm::vec3(0,0,5), glm::vec3(0,0,0), glm::vec3(0,1,0));
 
+    //Audio Analyzer
+    // AudioAnalyzer analyzer("assets/music.wav");
+    // analyzer.init();
+
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -110,8 +117,8 @@ int main() {
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, particles.size() * sizeof(glm::vec3), particles.data());
 
-        float camX = sin(time) * 10.0f;
-        float camZ = cos(time) * 10.0f;
+        float camX = sin(camAngle) * camRadius;
+        float camZ = cos(camAngle) * camRadius;
         glm::mat4 view = glm::lookAt(glm::vec3(camX, 0, camZ),
                                     glm::vec3(0, 0, 0),
                                     glm::vec3(0, 1, 0));
@@ -126,6 +133,14 @@ int main() {
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        //Keyboard input
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+            camAngle -= 0.01f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+            camAngle += 0.01f;
+        }
     }
 
     glDeleteVertexArrays(1, &vao);
