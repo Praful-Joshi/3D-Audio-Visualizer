@@ -15,6 +15,10 @@ AudioAnalyzer::AudioAnalyzer(const std::string& filepath)
     : filePath(filepath), sampleIndex(0) {}
 
     void AudioAnalyzer::init() {
+        ma_engine_init(nullptr, &engine);
+        ma_sound_init_from_file(&engine, filePath.c_str(), 0, nullptr, nullptr, &sound);
+        ma_sound_start(&sound);
+
         decoderConfig = ma_decoder_config_init(ma_format_f32, 1, 44100);
     
         if (ma_decoder_init_file(filePath.c_str(), &decoderConfig, &decoder) != MA_SUCCESS) {

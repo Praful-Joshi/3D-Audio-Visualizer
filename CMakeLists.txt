@@ -21,9 +21,13 @@ include_directories(
 
 # Audio Analyzer static lib
 add_library(audioAnalyzer
-    audioAnalyzer.cpp
+    audioAnalyzer/audioAnalyzer.cpp
     external/kissfft/kiss_fft.c
     external/miniaudio.cpp
+)
+
+add_library(shader
+    shaders/shader.cpp
 )
 
 # Main executable
@@ -35,4 +39,5 @@ target_link_libraries(particle
     ${GLEW_LIBRARIES}
     ${GLFW_LIBRARIES}
     audioAnalyzer
+    shader
 )

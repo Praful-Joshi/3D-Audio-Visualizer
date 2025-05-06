@@ -22,7 +22,8 @@ private:
     ma_uint32 sampleRate;
     ma_decoder decoder;
     ma_decoder_config decoderConfig;
-
+    ma_engine engine;
+    ma_sound sound;
 
     kiss_fft_cfg fftCfg = nullptr;
     kiss_fft_cpx* fftIn = nullptr;
