@@ -7,8 +7,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/random.hpp>
 #include <vector>
-//#include "audioAnalyzer.h"
+#include "audioAnalyzer.h"
 
 const int particleCount = 500;
 const float camRadius = 10.0f;
@@ -71,11 +72,17 @@ int main() {
     // Vertex data for particles
     std::vector<glm::vec3> particles;
     for (int i = 0; i < particleCount; ++i) {
-        float x = ((rand() % 100) / 50.0f - 1.0f) * 2.0f;
-        float y = ((rand() % 100) / 50.0f - 1.0f) * 2.0f;
-        float z = ((rand() % 100) / 50.0f - 1.0f) * 7.0f;
+        float theta = glm::linearRand(0.0f, glm::two_pi<float>());
+        float phi = glm::linearRand(0.0f, glm::pi<float>());
+        float r = 2.0f; // radius of sphere
+    
+        float x = r * sin(phi) * cos(theta);
+        float y = r * sin(phi) * sin(theta);
+        float z = r * cos(phi);
+    
         particles.push_back(glm::vec3(x, y, z));
     }
+    
     std::vector<glm::vec3> originalParticles = particles;  // keep a copy
 
     GLuint vao, vbo;
@@ -98,10 +105,21 @@ int main() {
     glm::mat4 view = glm::lookAt(glm::vec3(0,0,5), glm::vec3(0,0,0), glm::vec3(0,1,0));
 
     //Audio Analyzer
-    // AudioAnalyzer analyzer("assets/music.wav");
-    // analyzer.init();
+    AudioAnalyzer analyzer("assets/music.wav");
+    analyzer.init();
 
     while (!glfwWindowShouldClose(window)) {
+
+        analyzer.update();
+        std::vector<float> bands = analyzer.getFrequencyBands();
+
+        // Print first few bands (not all 64 every frame to avoid spam)
+        std::cout << "Bands: ";
+        for (int i = 0; i < 8; ++i) {
+            std::cout << bands[i] << " ";
+        }
+        std::cout << std::endl;
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shaderProgram);
@@ -109,9 +127,12 @@ int main() {
         //Animated camera position (orbiting)
         float time = glfwGetTime();
 
-        // Update particle positions with sine wave animation
+        // Update particle positions with breathe animation
         for (size_t i = 0; i < particles.size(); ++i) {
-            particles[i].y = originalParticles[i].y + sin(time + originalParticles[i].x * 3.0f) * 0.5f;
+            float freqAmp = bands[i % bands.size()];
+            particles[i].x = originalParticles[i].x * (1.0f + freqAmp * 1.5f);
+            particles[i].y = originalParticles[i].y * (1.0f + freqAmp * 1.5f);
+            particles[i].z = originalParticles[i].z * (1.0f + freqAmp * 1.5f);
         }
         // Update VBO with new particle positions
         glBindBuffer(GL_ARRAY_BUFFER, vbo);

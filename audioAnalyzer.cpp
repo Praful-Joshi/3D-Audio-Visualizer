@@ -6,6 +6,7 @@
 #include "kissfft/kiss_fft.h"  // add kissfft headers to project
 #include <cstring>
 #include <cmath>
+#include <iostream>
 
 #define FFT_SIZE 1024
 #define NUM_BANDS 64
@@ -13,18 +14,31 @@
 AudioAnalyzer::AudioAnalyzer(const std::string& filepath)
     : filePath(filepath), sampleIndex(0) {}
 
-void AudioAnalyzer::init() {
-    ma_result result = ma_decode_file(filePath.c_str(), &format, &sampleRate, &frameCount, &samples, nullptr);
-    if (result != MA_SUCCESS) {
-        printf("Failed to load audio file!\n");
-        exit(1);
+    void AudioAnalyzer::init() {
+        decoderConfig = ma_decoder_config_init(ma_format_f32, 1, 44100);
+    
+        if (ma_decoder_init_file(filePath.c_str(), &decoderConfig, &decoder) != MA_SUCCESS) {
+            std::cerr << "Failed to initialize decoder.\n";
+            exit(1);
+        }
+    
+        ma_uint64 pcmFrameCount;
+        if (ma_decoder_get_length_in_pcm_frames(&decoder, &pcmFrameCount) != MA_SUCCESS) {
+            std::cerr << "Failed to get PCM frame count.\n";
+            exit(1);
+        }
+        frameCount = static_cast<size_t>(pcmFrameCount);
+        samples = new float[frameCount];
+        ma_decoder_read_pcm_frames(&decoder, samples, frameCount, nullptr);
+    
+        fftCfg = kiss_fft_alloc(FFT_SIZE, 0, nullptr, nullptr);
+        fftIn = new kiss_fft_cpx[FFT_SIZE];
+        fftOut = new kiss_fft_cpx[FFT_SIZE];
+        bands.resize(NUM_BANDS, 0.0f);
+    
+        sampleIndex = 0;
     }
-
-    fftCfg = kiss_fft_alloc(FFT_SIZE, 0, nullptr, nullptr);
-    fftIn = new kiss_fft_cpx[FFT_SIZE];
-    fftOut = new kiss_fft_cpx[FFT_SIZE];
-    bands.resize(NUM_BANDS, 0.0f);
-}
+    
 
 void AudioAnalyzer::update() {
     if (sampleIndex + FFT_SIZE >= frameCount) sampleIndex = 0;
@@ -53,8 +67,10 @@ const std::vector<float>& AudioAnalyzer::getFrequencyBands() const {
 }
 
 AudioAnalyzer::~AudioAnalyzer() {
-    ma_free(samples);
+    delete[] samples;
     delete[] fftIn;
     delete[] fftOut;
-    free(fftCfg);
+    kiss_fft_free(fftCfg);
+    ma_decoder_uninit(&decoder);
 }
+
